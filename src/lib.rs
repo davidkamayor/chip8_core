@@ -1,3 +1,5 @@
+use std::fmt::LowerExp;
+
 pub const SCREEN_WIDTH: usize = 64;
 pub const SCREEN_HEIGHT: usize = 32;
 
@@ -81,6 +83,21 @@ impl Emu {
         self.keys = [false; NUM_KEYS];
         self.dt = 0;
         self.st = 0;
-        self.ram[...FONTSET_SIZE].copy_from_slice(&FONTSET);
+        self.ram[..FONTSET_SIZE].copy_from_slice(&FONTSET);
+    }
+
+    pub fn tick(&mut self) {
+        // fetch
+        let op = self.fetch();
+        // decode
+        // execute
+    }
+
+    fn fetch(&mut self) -> u16 {
+        let higher_byte = self.ram[self.pc as usize] as u16;
+        let lower_byte = self.ram[(self.pc + 1) as usize as u16];
+        let op = (higher_byte << 8) | lower_byte;
+        self.pc += 2;
+        op
     }
 }
