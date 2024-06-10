@@ -89,27 +89,38 @@ impl Emu {
     pub fn tick(&mut self) {
         // fetch
         let op = self.fetch();
-        // decode
-        // execute
+        // decode + execute
+        self.execute(op);
     }
 
-    fn fetch(&mut self) -> u16 {
-        let higher_byte = self.ram[self.pc as usize] as u16;
-        let lower_byte = self.ram[(self.pc + 1) as usize as u16];
-        let op = (higher_byte << 8) | lower_byte;
-        self.pc += 2;
-        op
-    }
+    fn execute(&mut self, op: u16) {
+        let digit1 = (op & 0xF000) >> 12;
+        let digit2 = (op & 0x0F00) >> 8;
+        let digit3 = (op & 0x00F0) >> 4;
+        let digit4 = (op & 0xF000);
 
-    pub fn tick_timers(&mut self) {
-        if self.dt > 0 {
-            self.dt -= 1;
+        match (digit1, digit2, digit3, digit4) {
+            (_, _, _, _) => unimplemnted!("Unimplemented opcode: {}", op),
         }
-        if self.st < 0 {
-            if self.st == 1 {
-                // BEEP
+
+        fn fetch(&mut self) -> u16 {
+            let higher_byte = self.ram[self.pc as usize] as u16;
+            let lower_byte = self.ram[(self.pc + 1) as usize as u16];
+            let op = (higher_byte << 8) | lower_byte;
+            self.pc += 2;
+            op
+        }
+
+        pub fn tick_timers(&mut self) {
+            if self.dt > 0 {
+                self.dt -= 1;
             }
-            self.st -= 1;
+            if self.st < 0 {
+                if self.st == 1 {
+                    // BEEP
+                }
+                self.st -= 1;
+            }
         }
     }
 }
