@@ -1,3 +1,4 @@
+use rand::random;
 use std::fmt::LowerExp;
 
 pub const SCREEN_WIDTH: usize = 64;
@@ -234,6 +235,43 @@ impl Emu {
 
                 self.v_reg[x] = new_vx;
                 self.v_reg[0xF] = new_vf;
+            }
+
+            // 8XYE - VX «= 1
+            (8, _, _, 0xE) => {
+                let x = digit2 as usize;
+                let msb = (self.v_reg[x] >> 7) & 1;
+                self.v_reg[x] <<= 1;
+                self.v_reg[0xF] = msb;
+            }
+
+            //9XY0 - Skip if VX != VY
+            (9, _, _, 0) => {
+                let x = digit2 as usize;
+                let y = digit3 as usize;
+                if self.v_reg[x] != self.v_reg[y] {
+                    self.pc += 2;
+                }
+            }
+
+            // ANNN - I = NNN
+            (0xA, _, _, _) => {
+                let nnn = op & 0xFFF;
+                self.i_reg = nnn;
+            }
+
+            // BNNN - Jump to V0 + NNN
+            (0xB, _, _, _) => {
+                let nnn = op & 0xFFF;
+                self.pc = (self.v_reg[0] as u16) + nnn;
+            }
+
+            //CXNN - VX = rand() & NN
+            (0xC, _, _, _) => {
+                let x = digit2 as usize;
+                let nn = (op & 0xFF) as u8;
+                let rng: u8 = random();
+                self.v_reg[x] = rng & nn;
             }
 
             // DEFAULT
