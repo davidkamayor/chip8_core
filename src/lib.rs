@@ -101,34 +101,34 @@ impl Emu {
         let digit4 = (op & 0xF000);
 
         match (digit1, digit2, digit3, digit4) {
-            // NOP
+            // 0000 NOP
             (0, 0, 0, 0) => return,
 
-            //CLEAR SCREEN
+            //00E0 - Clear screen
             (0, 0, 0xE, 0) => {
                 self.screen = [false; SCREEN_WIDTH * SCREEN_HEIGHT];
             }
 
-            // RETURN FROM SUBROUTINE
+            // 00EE - Return from Subroutine
             (0, 0, 0xE, 0xE) => {
                 let ret_addr = self.pop();
                 self.pc = ret_addr;
             }
 
-            // JUMP NNN
+            // 1NNN - Jump
             (1, _, _, _) => {
                 let nnn = op & 0xFFF;
                 self.pc = nnn;
             }
 
-            // CALL NNN SUBROUTINE
+            // 2NNN - Call Subroutine
             (2, _, _, _) => {
                 let nnn = op & 0xFFF;
                 self.push(self.pc);
                 self.pc = nnn;
             }
 
-            // SKIP NEXT IF VX == NN; ASSEMBLY EQUIVALENT OF IF/ELSE
+            // 3XNN - Skip next if VX == NN; ASSEMBLY EQUIVALENT OF IF/ELSE
             (3, _, _, _) => {
                 let x = digit2 as usize;
                 let nn = (op & 0xFF) as u8;
@@ -137,7 +137,7 @@ impl Emu {
                 }
             }
 
-            // SKIP NEXT IF VX != NN
+            // 4XNN - Skip next if VX != NN
             (4, _, _, _) => {
                 let x = digit2 as usize;
                 let nn = (op & 0xFF) as u8;
@@ -383,9 +383,9 @@ impl Emu {
                 }
 
                 // FX33 - I = BCD of VX
+                (0xF, _, 3, 3) => {
                 // converts value to decimal stored in RAM at address location in I register
                 // will always produce 3 byte numbers
-                (0xF, _, 3, 3) => {
                     let x = digit2 as usize;
                     let vx = self.v_reg[x] as f32;
 
