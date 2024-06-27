@@ -109,6 +109,26 @@ impl Emu {
         self.ram[start..end].copy_from_slice(data);
     }
 
+    fn fetch(&mut self) -> u16 {
+        let higher_byte = self.ram[self.pc as usize] as u16;
+        let lower_byte = self.ram[(self.pc + 1) as usize as u16];
+        let op = (higher_byte << 8) | lower_byte;
+        self.pc += 2;
+        op
+    }
+
+    pub fn tick_timers(&mut self) {
+        if self.dt > 0 {
+            self.dt -= 1;
+        }
+        if self.st < 0 {
+            if self.st == 1 {
+                // BEEP
+            }
+            self.st -= 1;
+        }
+    }
+
     fn execute(&mut self, op: u16) {
         let digit1 = (op & 0xF000) >> 12;
         let digit2 = (op & 0x0F00) >> 8;
@@ -438,24 +458,6 @@ impl Emu {
             (_, _, _, _) => unimplemented!("Unimplemented opcode: {}", op),
         }
 
-        fn fetch(&mut self) -> u16 {
-            let higher_byte = self.ram[self.pc as usize] as u16;
-            let lower_byte = self.ram[(self.pc + 1) as usize as u16];
-            let op = (higher_byte << 8) | lower_byte;
-            self.pc += 2;
-            op
-        }
-
-        pub fn tick_timers(&mut self) {
-            if self.dt > 0 {
-                self.dt -= 1;
-            }
-            if self.st < 0 {
-                if self.st == 1 {
-                    // BEEP
-                }
-                self.st -= 1;
-            }
-        }
+        
     }
 }
