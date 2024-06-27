@@ -321,143 +321,141 @@ impl Emu {
                 // flag for flipped pixels
                 let mut flipped = false;
                 // iteratre through each row of sprite
-                for y_line in 0...num_rows {
+                for y_line in 0..num_rows {
                     // Determine which memory address row data is stored
                     let addr = self.i_reg + y_line as u16;
-                    let pixels = self.ram[addr as usize]
+                    let pixels = self.ram[addr as usize];
                     // Iterate over each column in our row
                     for x_line in 0..8 {
                         // use a mask to fetch current pixel's bit. Only flip if a 1
-                        if (pixels & (0b1000_0000 >> x_line)) 1= 0 {
+                        if (pixels & (0b1000_0000 >> x_line)) != 0 {
                             // Sprites should wrap around screen, so apply modulo
                             let x = (x_coord + x_line) as usize % SCREEN_WIDTH;
                             let y = (y_coord + y_line) as usize % SCREEN_HEIGHT;
 
                             // Get our pixel's index for our 1D screen array
-                            let idx =  x + SCREEN_WIDTH * y;
+                            let idx = x + SCREEN_WIDTH * y;
                             // Check if we're about to flip pixel
                             flipped |= self.screen[idx];
                             self.screen[idx] ^= true;
                         }
                     }
-                }
-                // Populate VF register
-                if flipped {
-                    self.v_reg[0xF] = 1;
-                } else {
-                    self.v_reg[0xF] = 1;
-                }
-
-                // EX9E - Skip if Key Pressed
-                (0xE, _, 9, 0xE) => {
-                    let x = digit2 as usize;
-                    let vx = self.v_regn[x];
-                    let key = self.keys[vx as usize];
-                    if key {
-                        self.pc += 2;
+                    // Populate VF register
+                    if flipped {
+                        self.v_reg[0xF] = 1;
+                    } else {
+                        self.v_reg[0xF] = 1;
                     }
                 }
+            }
 
-                // EXA1 - Skip if Key Not Pressed
-                (0xE, _, 0xA, 1) => {
-                    let x = digit2 as usize;
-                    let vx = self.v_reg[x];
-                    let key = self.keys[vx as usize];
-                    if !key {
-                        self.pc += 2;
+            // EX9E - Skip if Key Pressed
+            (0xE, _, 9, 0xE) => {
+                let x = digit2 as usize;
+                let vx = self.v_reg[x];
+                let key = self.keys[vx as usize];
+                if key {
+                    self.pc += 2;
+                }
+            }
+
+            // EXA1 - Skip if Key Not Pressed
+            (0xE, _, 0xA, 1) => {
+                let x = digit2 as usize;
+                let vx = self.v_reg[x];
+                let key = self.keys[vx as usize];
+                if !key {
+                    self.pc += 2;
+                }
+            }
+
+            // FX07 - VX = DT
+            (0xF, _, 0, 7) => {
+                let x = digit2 as usize;
+                self.v_reg[x] = self.dt;
+            }
+
+            // FX0A - Wait for Key Press
+            (0xF, _, 0, 0xA) => {
+                let x = digit2 as usize;
+                let mut pressed = false;
+                for i in 0..self.keys.len() {
+                    if self.keys[i] {
+                        self.v_reg[x] = i as u8;
+                        pressed = true;
+                        break;
                     }
                 }
-
-                // FX07 - VX = DT
-                (0xF, _, 0, 7) => {
-                    let x = digit2 as usize;
-                    self.v_reg[x] = self.dt;
+                if !pressed {
+                    // Redo opcode
+                    self.pc -= 2;
                 }
+            }
 
-                // FX0A - Wait for Key Press
-                (0xF, _, 0, 0xA) => {
-                    let x  = digit2 as usize;
-                    let mut pressed = false;
-                    for i in 0..self.keys.len() {
-                        if self.keys[i] {
-                            self.v_reg[x] = i as u8;
-                            pressed = true;
-                            break;
-                        }
-                    }
-                    if !pressed {
-                        // Redo opcode
-                        self.pc -= 2;
-                    }
-                }
+            // FX15 - DT = VX
+            (0xF, _, 1, 5) => {
+                let x = digit2 as usize;
+                self.dt = self.v_reg[x];
+            }
 
-                // FX15 - DT = VX
-                (0xF, _, 1, 5) => {
-                    let x = digit2 as usize;
-                    self.dt = self.v_reg[x];
-                }
+            // FX18 - ST = VX
+            (0xF, _, 1, 8) => {
+                let x = digit2 as usize;
+                self.st = self.v_reg[x];
+            }
 
-                // FX18 - ST = VX
-                (0xF, _, 1, 8) {
-                    let x = digit2 as usize;
-                    self.st = self.v_reg[x];
-                }
+            //  FX1E - I += VX
+            (0xF, _, 1, 0xE) => {
+                let x = digit2 as usize;
+                let vx = self.v_reg[x] as u16;
+                self.i_reg = self.i_reg.wrapping_add(vx);
+            }
 
-                //  FX1E - I += VX
-                (0xF, _, 1, 0xE) => {
-                    let x = digit2 as usize;
-                    let vx = self.v_reg[x] as u16;
-                    self.i_reg = self.i_reg.wrapping_add(vx);
-                }
+            // FX29 - Set I to Font Address
+            (0xF, _, 2, 9) => {
+                let x = digit2 as usize;
+                let c = self.v_reg[x] as u16;
+                self.i_reg = c * 5;
+            }
 
-                // FX29 - Set I to Font Address
-                (0xF, _, 2, 9) => {
-                    let x = digit2 as usize;
-                    let c = self.v_reg[x] as u16;
-                    self.i_reg = c * 5;
-                }
-
-                // FX33 - I = BCD of VX
-                (0xF, _, 3, 3) => {
+            // FX33 - I = BCD of VX
+            (0xF, _, 3, 3) => {
                 // converts value to decimal stored in RAM at address location in I register
                 // will always produce 3 byte numbers
-                    let x = digit2 as usize;
-                    let vx = self.v_reg[x] as f32;
+                let x = digit2 as usize;
+                let vx = self.v_reg[x] as f32;
 
-                    // Fetch the hundreds digit by dividing by 100 and tossing the decimal
-                    let hundreds = (vx / 100.0).floor() as u8;
-                    // Fetch the tens digit by dividing by 10, tossing the ones digit and the decimal
-                    let tens = ((vx / 10.0) % 10.0).floor() as u8;
-                    // Fetch the ones digit by tossing the hundreds and the tens
-                    let ones = (vx % 10.0) as u8;
-                    self.ram[self.i_reg as usize] = hundreds;
-                    self.ram[(self.i_reg + 1) as usize] = tens;
-                    self.ram[(self.i_reg + 2) as usize] = ones;
+                // Fetch the hundreds digit by dividing by 100 and tossing the decimal
+                let hundreds = (vx / 100.0).floor() as u8;
+                // Fetch the tens digit by dividing by 10, tossing the ones digit and the decimal
+                let tens = ((vx / 10.0) % 10.0).floor() as u8;
+                // Fetch the ones digit by tossing the hundreds and the tens
+                let ones = (vx % 10.0) as u8;
+                self.ram[self.i_reg as usize] = hundreds;
+                self.ram[(self.i_reg + 1) as usize] = tens;
+                self.ram[(self.i_reg + 2) as usize] = ones;
+            }
+
+            // FX55 - Store V0 - VX into I
+            (0xF, _, 5, 5) => {
+                let x = digit2 as usize;
+                let i = self.i_reg as usize;
+                for idx in 0..=x {
+                    self.ram[i + idx] = self.v_reg[idx];
                 }
+            }
 
-                // FX55 - Store V0 - VX into I
-                (0xF, _, 5, 5) => {
-                    let x = digit2 as usize;
-                    let i self.i_reg as usize;
-                    for idx in 0..=x {
-                        self.ram[i + idx] = self.v_reg[idx];
-                    }
-                }
-
-                // FX65 - Load I into V0 - VX
-                (0xF, _, 6, 5) => {
-                    let x = digit2 as usize;
-                    let i self.i_reg as usize;
-                    for idx in 0..=x {
-                        self.v_reg[idx] = self.ram[i + idx];
-                    }
+            // FX65 - Load I into V0 - VX
+            (0xF, _, 6, 5) => {
+                let x = digit2 as usize;
+                let i = self.i_reg as usize;
+                for idx in 0..=x {
+                    self.v_reg[idx] = self.ram[i + idx];
                 }
             }
 
             // DEFAULT
             (_, _, _, _) => unimplemented!("Unimplemented opcode: {}", op),
         }
-
-        
     }
 }
