@@ -94,21 +94,6 @@ impl Emu {
         self.execute(op);
     }
 
-    pub fn get_display(&self) -> &[bool] {
-        &self.screen
-    }
-
-    pub fn keypress(&mut self, idx: usize, pressed: bool) {
-        // idx must be less than 16
-        self.keys[idx] = pressed;
-    }
-
-    pub fn load(&mut self, data: &[u8]) {
-        let start = START_ADDR as usize;
-        let end = (START_ADDR as usize) + data.len();
-        self.ram[start..end].copy_from_slice(data);
-    }
-
     fn fetch(&mut self) -> u16 {
         let higher_byte = self.ram[self.pc as usize] as u16;
         let lower_byte = self.ram[(self.pc + 1) as usize as u16];
@@ -127,6 +112,21 @@ impl Emu {
             }
             self.st -= 1;
         }
+    }
+
+    pub fn get_display(&self) -> &[bool] {
+        &self.screen
+    }
+
+    pub fn keypress(&mut self, idx: usize, pressed: bool) {
+        // idx must be less than 16
+        self.keys[idx] = pressed;
+    }
+
+    pub fn load(&mut self, data: &[u8]) {
+        let start = START_ADDR as usize;
+        let end = (START_ADDR as usize) + data.len();
+        self.ram[start..end].copy_from_slice(data);
     }
 
     fn execute(&mut self, op: u16) {
